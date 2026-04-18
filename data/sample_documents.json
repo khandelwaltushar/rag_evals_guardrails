@@ -6,14 +6,74 @@
       "metadata": {"source": "internal", "year": 2024}
     },
     {
+      "id": "policy-retention",
+      "text": "Data Retention Policy. Raw customer documents are retained for 90 days in hot storage and archived to cold storage for 365 days. After 365 days, data is purged unless a legal hold is active. Derived embeddings follow the same retention window as the source document.",
+      "metadata": {"source": "internal", "type": "policy"}
+    },
+    {
+      "id": "policy-access",
+      "text": "Access Control Policy. Production access to FAISS indices and embedding caches is restricted to members of the on-call rotation. All access is logged and audited quarterly. Break-glass credentials are rotated after each use and require two-person approval.",
+      "metadata": {"source": "internal", "type": "policy"}
+    },
+    {
       "id": "architecture-note",
       "text": "Architecture note: Hybrid retrieval combines BM25 lexical scoring with dense embeddings. Score fusion uses a configurable alpha to balance precision (sparse) and semantic recall (dense). Reranking is optional and should be gated behind feature flags due to latency and cost.",
+      "metadata": {"source": "engineering", "type": "design"}
+    },
+    {
+      "id": "architecture-embeddings",
+      "text": "Embedding layer design. We use OpenAI text-embedding-3-small (1536 dim) by default and sentence-transformers BAAI/bge-small-en-v1.5 (384 dim) for local deployments. Vectors are L2-normalized before insertion into FAISS IndexFlatIP so inner product equals cosine similarity.",
+      "metadata": {"source": "engineering", "type": "design"}
+    },
+    {
+      "id": "architecture-chunking",
+      "text": "Chunking strategy. The default recursive chunker splits text by paragraph, then sentence, targeting 512 tokens with 64-token overlap. The semantic chunker groups sentences by cosine similarity above a 0.75 threshold; it is slower but yields more topically coherent chunks for long documents.",
+      "metadata": {"source": "engineering", "type": "design"}
+    },
+    {
+      "id": "architecture-cache",
+      "text": "Embedding cache. Redis is the primary cache with 7-day TTL; the service falls back to an in-memory dictionary when Redis is unavailable. Cache keys are SHA-256 hashes of the input text, which deduplicates identical chunks across documents.",
       "metadata": {"source": "engineering", "type": "design"}
     },
     {
       "id": "ops-runbook",
       "text": "Operations: When confidence scores fall below the configured threshold, the system must return an insufficient-information response or a clarifying question instead of a speculative answer. All query traces must include retrieved chunk identifiers for audit.",
       "metadata": {"source": "ops", "type": "runbook"}
+    },
+    {
+      "id": "ops-incident-response",
+      "text": "Incident response. Pager alerts fire when p95 query latency exceeds 2000 ms for five consecutive minutes, or when the guardrail fallback rate exceeds 20 percent over a 15 minute window. On-call acknowledges within 5 minutes and posts status updates to #rag-incidents every 15 minutes.",
+      "metadata": {"source": "ops", "type": "runbook"}
+    },
+    {
+      "id": "ops-deployment",
+      "text": "Deployment runbook. The service is deployed via blue-green on Kubernetes. Rollouts wait for a readiness probe on /health plus a smoke query against a canary corpus. Rollback is automatic if the error rate on /query exceeds 2 percent within the first 10 minutes.",
+      "metadata": {"source": "ops", "type": "runbook"}
+    },
+    {
+      "id": "eval-methodology",
+      "text": "Evaluation methodology. Each release is scored on a 50-item golden Q&A set covering policy, architecture, and operational queries. We report retrieval recall@5, LLM-judge faithfulness, relevance, p50 and p95 latency, and average cost per query. Regressions of more than 5 percent block the release.",
+      "metadata": {"source": "engineering", "type": "eval"}
+    },
+    {
+      "id": "eval-judge",
+      "text": "Judge configuration. Faithfulness and relevance are graded by a separate LLM that sees only the question, the answer, and the retrieved context. The judge returns structured JSON with scores in [0, 1]. A smaller distilled model is used in CI to keep eval costs low; a larger model is used for pre-release gates.",
+      "metadata": {"source": "engineering", "type": "eval"}
+    },
+    {
+      "id": "guardrails-design",
+      "text": "Guardrails design. Confidence is a weighted blend of retrieval similarity (70 percent) and LLM self-check (30 percent). If confidence is below the min_confidence_threshold, the response is replaced with either an insufficient-information message or a clarifying prompt that lists the top retrieved document IDs.",
+      "metadata": {"source": "engineering", "type": "design"}
+    },
+    {
+      "id": "observability-logging",
+      "text": "Observability. All requests emit structured JSON logs via structlog, with a trace_id propagated from the request through retrieval, generation, evaluation, and guardrails. When RAG_DEBUG is true, the prompt preview is included in the response trace; otherwise it is stripped to avoid PII exposure.",
+      "metadata": {"source": "engineering", "type": "observability"}
+    },
+    {
+      "id": "providers-matrix",
+      "text": "Provider support. The service supports OpenAI (gpt-4o-mini, text-embedding-3-small), Anthropic (claude-3-5-haiku) for chat and judge, and a fully local stack using Ollama for chat and sentence-transformers for embeddings. Provider selection is driven by LLM_PROVIDER and EMBEDDER_PROVIDER environment variables.",
+      "metadata": {"source": "engineering", "type": "design"}
     }
   ]
 }

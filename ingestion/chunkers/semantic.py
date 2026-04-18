@@ -6,7 +6,6 @@ import re
 import uuid
 
 import numpy as np
-from numpy.typing import NDArray
 
 from core.config import Settings
 from core.models import ChunkRecord, DocumentInput

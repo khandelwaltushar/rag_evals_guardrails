@@ -7,6 +7,7 @@ htmlcov/
 data/faiss_index
 data/bm25_corpus.json
 data/chunk_metadata.json
+data/eval_results.json
 .env
 *.egg-info/
 dist/

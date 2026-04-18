@@ -1,7 +1,7 @@
 import pytest
 
 from core.config import Settings
-from core.models import EvaluationMetrics, RetrievedChunk
+from core.models import EvaluationMetrics
 from guardrails.pipeline import GuardrailPipeline
 
 

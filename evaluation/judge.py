@@ -50,6 +50,7 @@ Respond with JSON only:
             model=self._settings.judge_model,
         )
         data = _extract_json(text)
+        data = _coerce_scores(data)
         try:
             jr = JudgeResult.model_validate(data)
         except Exception as e:
@@ -62,4 +63,33 @@ def _extract_json(text: str) -> dict[str, Any]:
     m = re.search(r"\{[\s\S]*\}", text)
     if not m:
         return {}
-    return json.loads(m.group())
+    try:
+        return json.loads(m.group())
+    except json.JSONDecodeError:
+        return {}
+
+
+def _coerce_scores(data: dict[str, Any]) -> dict[str, Any]:
+    """Smaller local models return null or drop required fields — coerce per-field rather than failing the whole row."""
+    if not isinstance(data, dict):
+        return {"faithfulness": 0.5, "relevance": 0.5, "rationale": "non_dict_response"}
+    out = dict(data)
+    for key in ("faithfulness", "relevance"):
+        v = out.get(key)
+        if v is None:
+            out[key] = 0.5
+        else:
+            try:
+                f = float(v)
+                out[key] = min(1.0, max(0.0, f))
+            except (TypeError, ValueError):
+                out[key] = 0.5
+    rq = out.get("retrieval_quality")
+    if rq is not None:
+        try:
+            out["retrieval_quality"] = min(1.0, max(0.0, float(rq)))
+        except (TypeError, ValueError):
+            out["retrieval_quality"] = None
+    if not isinstance(out.get("rationale", ""), str):
+        out["rationale"] = ""
+    return out

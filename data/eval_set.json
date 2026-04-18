@@ -1,0 +1,159 @@
+{
+  "description": "Golden Q&A set used for offline evaluation. Each item lists the expected ground-truth doc_ids (for retrieval recall@k) and a reference answer (for inspection).",
+  "items": [
+    {
+      "id": "q01",
+      "query": "What encryption is required for customer data?",
+      "gold_doc_ids": ["policy-2024"],
+      "reference_answer": "All customer data must be encrypted at rest and in transit.",
+      "category": "policy"
+    },
+    {
+      "id": "q02",
+      "query": "How long are raw customer documents retained before being purged?",
+      "gold_doc_ids": ["policy-retention"],
+      "reference_answer": "Hot storage for 90 days, cold storage for 365 days, then purged unless a legal hold is active.",
+      "category": "policy"
+    },
+    {
+      "id": "q03",
+      "query": "Who can access production FAISS indices?",
+      "gold_doc_ids": ["policy-access", "policy-2024"],
+      "reference_answer": "Members of the on-call rotation, with SSO and MFA; all access is logged.",
+      "category": "policy"
+    },
+    {
+      "id": "q04",
+      "query": "How are break-glass credentials handled?",
+      "gold_doc_ids": ["policy-access"],
+      "reference_answer": "Rotated after each use and require two-person approval.",
+      "category": "policy"
+    },
+    {
+      "id": "q05",
+      "query": "How does hybrid retrieval balance sparse and dense scoring?",
+      "gold_doc_ids": ["architecture-note"],
+      "reference_answer": "A configurable alpha weights dense embeddings against BM25 lexical scores after min-max normalization.",
+      "category": "architecture"
+    },
+    {
+      "id": "q06",
+      "query": "Which embedding models does the service support?",
+      "gold_doc_ids": ["architecture-embeddings", "providers-matrix"],
+      "reference_answer": "OpenAI text-embedding-3-small (1536 dim) and sentence-transformers BAAI/bge-small-en-v1.5 (384 dim).",
+      "category": "architecture"
+    },
+    {
+      "id": "q07",
+      "query": "What is the default chunk size and overlap?",
+      "gold_doc_ids": ["architecture-chunking"],
+      "reference_answer": "512 tokens with 64-token overlap, splitting by paragraph then sentence.",
+      "category": "architecture"
+    },
+    {
+      "id": "q08",
+      "query": "When does the semantic chunker group sentences together?",
+      "gold_doc_ids": ["architecture-chunking"],
+      "reference_answer": "When sentence cosine similarity is above a 0.75 threshold.",
+      "category": "architecture"
+    },
+    {
+      "id": "q09",
+      "query": "What happens when Redis is unavailable?",
+      "gold_doc_ids": ["architecture-cache"],
+      "reference_answer": "The service falls back to an in-memory dictionary cache.",
+      "category": "architecture"
+    },
+    {
+      "id": "q10",
+      "query": "What vector store index type is used and why?",
+      "gold_doc_ids": ["architecture-embeddings"],
+      "reference_answer": "FAISS IndexFlatIP with L2-normalized vectors, so inner product equals cosine similarity.",
+      "category": "architecture"
+    },
+    {
+      "id": "q11",
+      "query": "What should the system do when confidence is below the threshold?",
+      "gold_doc_ids": ["ops-runbook", "guardrails-design"],
+      "reference_answer": "Return an insufficient-information response or a clarifying question rather than speculating.",
+      "category": "ops"
+    },
+    {
+      "id": "q12",
+      "query": "What triggers an incident pager alert for latency?",
+      "gold_doc_ids": ["ops-incident-response"],
+      "reference_answer": "p95 query latency above 2000 ms for five consecutive minutes.",
+      "category": "ops"
+    },
+    {
+      "id": "q13",
+      "query": "When is the deployment automatically rolled back?",
+      "gold_doc_ids": ["ops-deployment"],
+      "reference_answer": "If the /query error rate exceeds 2 percent within the first 10 minutes after rollout.",
+      "category": "ops"
+    },
+    {
+      "id": "q14",
+      "query": "How does the blue-green rollout verify a new version before promoting it?",
+      "gold_doc_ids": ["ops-deployment"],
+      "reference_answer": "It waits for the /health readiness probe and a smoke query against a canary corpus.",
+      "category": "ops"
+    },
+    {
+      "id": "q15",
+      "query": "What metrics are reported in the release evaluation?",
+      "gold_doc_ids": ["eval-methodology"],
+      "reference_answer": "Retrieval recall@5, LLM-judge faithfulness, relevance, p50 and p95 latency, and average cost per query.",
+      "category": "eval"
+    },
+    {
+      "id": "q16",
+      "query": "What regression threshold blocks a release?",
+      "gold_doc_ids": ["eval-methodology"],
+      "reference_answer": "More than a 5 percent regression on the golden Q&A set.",
+      "category": "eval"
+    },
+    {
+      "id": "q17",
+      "query": "What inputs does the LLM judge see?",
+      "gold_doc_ids": ["eval-judge"],
+      "reference_answer": "The question, the answer, and the retrieved context. It returns structured JSON with scores in [0, 1].",
+      "category": "eval"
+    },
+    {
+      "id": "q18",
+      "query": "How is the confidence score computed?",
+      "gold_doc_ids": ["guardrails-design"],
+      "reference_answer": "70 percent retrieval similarity plus 30 percent LLM self-check.",
+      "category": "guardrails"
+    },
+    {
+      "id": "q19",
+      "query": "How do I propagate a trace_id through the pipeline?",
+      "gold_doc_ids": ["observability-logging"],
+      "reference_answer": "A trace_id is generated per request and propagated through retrieval, generation, evaluation, and guardrails in structlog JSON logs.",
+      "category": "observability"
+    },
+    {
+      "id": "q20",
+      "query": "Which environment variable selects the local Ollama chat provider?",
+      "gold_doc_ids": ["providers-matrix"],
+      "reference_answer": "LLM_PROVIDER=ollama (with EMBEDDER_PROVIDER=local for the embedder).",
+      "category": "providers"
+    },
+    {
+      "id": "q21_oos",
+      "query": "What is the exact CPU model used in the datacenter?",
+      "gold_doc_ids": [],
+      "reference_answer": "Not in corpus; the system should refuse or return insufficient_info.",
+      "category": "out_of_scope"
+    },
+    {
+      "id": "q22_oos",
+      "query": "Who is the current CEO of the company?",
+      "gold_doc_ids": [],
+      "reference_answer": "Not in corpus; the system should refuse or return insufficient_info.",
+      "category": "out_of_scope"
+    }
+  ]
+}
