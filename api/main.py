@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
+import json
+
 import openai
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 
 from api.deps import AppState, build_app_state
 from api.errors import openai_api_error_handler
@@ -111,3 +113,23 @@ async def query(req: QueryRequest, state: AppState = Depends(get_state)) -> Quer
         skip_evaluation=req.skip_evaluation,
         top_k=req.top_k,
     )
+
+
+@app.post(
+    "/query_stream",
+    tags=["query"],
+    summary="Run RAG query with streamed tokens (SSE)",
+    response_description=(
+        "text/event-stream with events: 'retrieved' (docs), 'token' (text delta), "
+        "'done' (confidence + guardrail action). Evaluation is skipped in streaming mode."
+    ),
+)
+async def query_stream(req: QueryRequest, state: AppState = Depends(get_state)) -> StreamingResponse:
+    async def _gen():
+        try:
+            async for event, payload in state.query_service.run_stream(req.query, top_k=req.top_k):
+                yield f"event: {event}\ndata: {json.dumps(payload)}\n\n"
+        except Exception as e:
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(_gen(), media_type="text/event-stream")

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Any
 
 from core.config import Settings
 from core.logging_config import get_logger
-from core.models import QueryResponse, RetrievedChunk
+from core.models import QueryResponse
 from core.tokens import TokenLedger
 from core.tracing import TraceContext
 from evaluation.pipeline import EvaluationPipeline
@@ -101,4 +102,50 @@ class QueryPipelineService:
             guardrail_action=action,
             trace=trace_dict,
             token_usage=ledger.to_dict(),
+        )
+
+    async def run_stream(self, query: str, *, top_k: int | None = None) -> AsyncIterator[tuple[str, Any]]:
+        """Streaming variant: yields (event_type, payload) tuples.
+
+        Events: 'retrieved' (doc list), 'token' (text delta), 'done' (final guardrail+confidence meta).
+        Evaluation is skipped in streaming mode; call /query for metrics.
+        """
+        if not hasattr(self._llm, "stream_complete"):
+            raise RuntimeError("Current LLM provider does not support streaming")
+
+        k = top_k or self._settings.top_k
+        rw, _ = await rewrite_query(self._settings, self._llm, query)
+        retrieved = await self._hybrid.retrieve(rw, top_k=k * 2 if self._settings.use_reranker else k)
+        if self._settings.use_reranker and self._reranker and retrieved:
+            retrieved = await self._reranker.rerank(rw, retrieved, top_n=k)
+        retrieved = retrieved[:k]
+
+        yield ("retrieved", [c.model_dump() for c in retrieved])
+
+        context_block = "\n\n".join(f"[{c.chunk_id}] {c.text}" for c in retrieved)
+        system = (
+            "You are a careful assistant. Answer using ONLY the provided context. "
+            "If the context does not contain the answer, say you cannot find it in the sources."
+        )
+        user = f"Context:\n{context_block}\n\nQuestion: {query}\n\nAnswer concisely:"
+
+        buf: list[str] = []
+        async for delta in self._llm.stream_complete(
+            system=system, user=user, temperature=0.2, max_tokens=1024
+        ):
+            buf.append(delta)
+            yield ("token", delta)
+
+        answer = "".join(buf)
+        final, confidence, action = await self._guardrails.apply(query, answer, retrieved, None)
+        replaced = final != answer
+
+        yield (
+            "done",
+            {
+                "confidence_score": confidence,
+                "guardrail_action": action,
+                "guardrail_replaced_answer": replaced,
+                "final_answer_if_replaced": final if replaced else None,
+            },
         )

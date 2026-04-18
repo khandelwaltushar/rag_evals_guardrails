@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+
 from anthropic import AsyncAnthropic
 
 from core.config import Settings
@@ -41,3 +43,24 @@ class AnthropicClient:
             "completion_tokens": resp.usage.output_tokens,
         }
         return text, u
+
+    async def stream_complete(
+        self,
+        system: str,
+        user: str,
+        *,
+        temperature: float = 0.2,
+        max_tokens: int | None = None,
+        model: str | None = None,
+    ) -> AsyncIterator[str]:
+        mt = max_tokens or 4096
+        async with self._client.messages.stream(
+            model=model or self._model,
+            max_tokens=mt,
+            temperature=temperature,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+        ) as stream:
+            async for text in stream.text_stream:
+                if text:
+                    yield text
