@@ -1,0 +1,28 @@
+{
+  "note": "Illustrative shapes only — real scores depend on models and corpus.",
+  "examples": [
+    {
+      "query": "What encryption is required for customer data?",
+      "expected_behavior": "Answer cites encryption at rest and in transit from policy-2024.",
+      "sample_response_shape": {
+        "answer": "Customer data must be encrypted at rest and in transit per company policy.",
+        "confidence_score": 0.72,
+        "guardrail_action": "none",
+        "evaluation_metrics": {
+          "faithfulness_score": 0.91,
+          "relevance_score": 0.88,
+          "embedding_answer_context_sim": 0.79
+        }
+      }
+    },
+    {
+      "query": "What is the exact CPU model in the datacenter?",
+      "expected_behavior": "Insufficient information or clarify — not in sample corpus.",
+      "sample_response_shape": {
+        "answer": "I do not have enough information in the retrieved sources...",
+        "confidence_score": 0.28,
+        "guardrail_action": "insufficient_info"
+      }
+    }
+  ]
+}

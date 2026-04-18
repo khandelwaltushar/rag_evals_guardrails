@@ -1,0 +1,41 @@
+"""OpenAI chat client."""
+
+from __future__ import annotations
+
+from openai import AsyncOpenAI
+
+from core.config import Settings
+
+
+class OpenAIClient:
+    def __init__(self, settings: Settings) -> None:
+        if not settings.openai_api_key:
+            raise ValueError("OPENAI_API_KEY required")
+        self._client = AsyncOpenAI(api_key=settings.openai_api_key, timeout=settings.request_timeout_s)
+        self._model = settings.chat_model
+
+    async def complete(
+        self,
+        system: str,
+        user: str,
+        *,
+        temperature: float = 0.2,
+        max_tokens: int | None = None,
+        model: str | None = None,
+    ) -> tuple[str, dict[str, int]]:
+        resp = await self._client.chat.completions.create(
+            model=model or self._model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        text = resp.choices[0].message.content or ""
+        usage = resp.usage
+        u = {
+            "prompt_tokens": usage.prompt_tokens if usage else 0,
+            "completion_tokens": usage.completion_tokens if usage else 0,
+        }
+        return text, u

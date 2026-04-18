@@ -1,0 +1,19 @@
+{
+  "documents": [
+    {
+      "id": "policy-2024",
+      "text": "Company RAG Policy (2024). All customer data must be encrypted at rest and in transit. Access to production retrieval indices requires SSO and MFA. Embeddings are computed using approved third-party APIs; no PII may be included in evaluation logs without redaction.",
+      "metadata": {"source": "internal", "year": 2024}
+    },
+    {
+      "id": "architecture-note",
+      "text": "Architecture note: Hybrid retrieval combines BM25 lexical scoring with dense embeddings. Score fusion uses a configurable alpha to balance precision (sparse) and semantic recall (dense). Reranking is optional and should be gated behind feature flags due to latency and cost.",
+      "metadata": {"source": "engineering", "type": "design"}
+    },
+    {
+      "id": "ops-runbook",
+      "text": "Operations: When confidence scores fall below the configured threshold, the system must return an insufficient-information response or a clarifying question instead of a speculative answer. All query traces must include retrieved chunk identifiers for audit.",
+      "metadata": {"source": "ops", "type": "runbook"}
+    }
+  ]
+}
